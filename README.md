@@ -5,12 +5,12 @@ ecosystem. It does not replace the existing Xenor repositories. It provides a
 focused environment for deterministic stepping, replay validation, seed/input
 handling, snapshot extraction, and checksum verification close to the machine.
 
-## Relationship To Xenor
+## Role In The Xenor Ecosystem
 
 Xenor already centers deterministic execution and inspectable simulation. This
 repository extends that identity with a native-first stack:
 
-- Rust hosts orchestration, replay control, tests, and the CLI surface.
+- Rust hosts orchestration, replay control, tests, and the CLI/runtime surface.
 - C++ owns the deterministic simulation kernel and core state transitions.
 - A thin C ABI keeps the boundary stable and auditable.
 - Python, Zig, Haskell, and assembly remain isolated sidecar modules for
@@ -18,6 +18,25 @@ repository extends that identity with a native-first stack:
 
 The point is not language variety. The point is disciplined boundaries around
 deterministic simulation work.
+
+`xenor-native` is intended to be consumed by other Xenor repositories rather
+than folded into them:
+
+- `xenor-web` vendors this repository as a Git submodule so the public surface
+  can pin an explicit native revision and validate that the native workspace is
+  present and healthy in CI.
+- future Xenor execution or simulation repositories can bind to the Rust API,
+  invoke the CLI for replay checks, or treat the C ABI as a stable native seam.
+
+## Language Responsibilities
+
+- Rust: safe host layer, orchestration, replay/runtime control, CLI entrypoint,
+  and deterministic test harness
+- C++: deterministic simulation kernel, phase execution, snapshot extraction,
+  and checksum generation behind a C ABI
+- Python: replay inspection and benchmark reporting only
+- Zig, Haskell, Assembly: isolated secondary modules for allocator experiments,
+  invariant validation, and checksum micro-kernel research
 
 ## Core Capabilities
 
@@ -87,6 +106,15 @@ cargo run --bin xenor-cli -- --seed 17 --snapshot
 cargo test
 ```
 
+If you want one command surface for the standard developer loop:
+
+```bash
+make build
+make test
+make native-build
+make smoke
+```
+
 The native library can also be built directly with CMake when isolating the C++
 layer:
 
@@ -115,7 +143,7 @@ cargo run --bin xenor-cli -- --seed 17 --input-file replay.txt --emit-replay tar
 cargo run --bin xenor-cli -- --seed 17 --repeat 100 --benchmark-out target/bench.csv
 ```
 
-## Determinism Philosophy
+## Replay, Snapshot, And Checksum Flow
 
 The kernel uses integer-only state transitions and explicit phase ordering:
 
@@ -129,7 +157,7 @@ Replay validation depends on two invariants:
 
 The test suite enforces both cases.
 
-## Replay And Checksum Tooling
+## Tooling
 
 - `xenor-cli --emit-replay` writes a JSON replay report containing frames,
   snapshots, and checksums
@@ -137,6 +165,15 @@ The test suite enforces both cases.
   monotonic tick flow and checksum evolution
 - `python/tools/benchmark_report.py` summarizes benchmark CSV output and checks
   checksum stability across repeated runs
+
+## CI Expectations
+
+GitHub Actions validates the repository with an explicit native-oriented path:
+
+- `cargo test`
+- direct CMake build of the C++ kernel
+- CLI smoke execution that emits replay and benchmark artifacts
+- Python tooling smoke checks over those generated artifacts
 
 ## Optional Sidecar Modules
 
@@ -149,3 +186,17 @@ because they are fashionable:
 
 They are intentionally outside the default build so the Rust/C++ core stays
 primary and coherent.
+
+## Consumption By Other Xenor Repositories
+
+Expected integration points are deliberately narrow:
+
+- pin the repository as a submodule when another Xenor repository needs a
+  reviewed native revision
+- call the Rust library for replay execution and snapshot/checksum retrieval
+- invoke `xenor-cli` in CI for deterministic smoke checks
+- consume generated replay artifacts from Python tooling for offline inspection
+
+This repository is the native validation surface. Other repositories should use
+it to strengthen determinism and integration discipline, not to duplicate the
+kernel internally.

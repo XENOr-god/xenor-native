@@ -15,6 +15,11 @@ the metal while preserving the same identity that defines Xenor elsewhere:
 This repository complements Xenor's existing codebases. It does not redefine
 the broader project.
 
+It is also the native boundary that other Xenor repositories can depend on
+without inheriting the full implementation directly. `xenor-web` consumes it as
+a pinned Git submodule so CI and documentation can reference a specific native
+revision.
+
 ## Primary Boundaries
 
 ### Rust Host Layer
@@ -60,6 +65,20 @@ The ABI exists to keep Rust and C++ aligned without leaking C++ semantics:
 This makes the boundary auditable, portable, and stable enough for future
 bindings.
 
+## Module Boundaries
+
+- `crates/xenor-native`: safe Rust wrapper over the native C ABI, replay
+  orchestration, runtime control, snapshot and checksum types
+- `crates/xenor-cli`: deterministic CLI entrypoint for running seed/input
+  sequences and emitting replay or benchmark artifacts
+- `cpp/include` + `cpp/src`: native simulation kernel, explicit phase logic,
+  snapshot assembly, checksum implementation
+- `tests`: deterministic integration coverage that asserts same-input and
+  changed-input behavior
+- `python/tools`: offline replay inspection and benchmark summarization
+- `zig`, `mlang`, `asm`: secondary experiments that remain outside the
+  authoritative runtime path
+
 ## Optional Languages
 
 The optional languages are intentionally isolated from the default build and
@@ -92,15 +111,20 @@ the repository does not become architecture-fragile.
 
 The native data flow is intentionally narrow:
 
+`seed -> input frames -> tick/phase execution -> snapshot -> checksum`
+
+Expanded:
+
 1. Rust constructs a `SimulationSeed`.
-2. Rust feeds `InputFrame` values into the native kernel.
-3. C++ executes the phases for one tick:
+2. Rust feeds ordered `InputFrame` values into the native kernel.
+3. C++ executes one deterministic tick with explicit phases:
    - input phase
    - simulation phase
    - finalize phase
-4. Rust requests a `StateSnapshot`.
+4. Rust requests a `StateSnapshot` at a deterministic boundary.
 5. C++ computes a `Checksum` from the native state.
-6. Rust stores the replay report and validates deterministic outcomes in tests.
+6. Rust stores replay output, exposes the terminal snapshot/checksum, and
+   validates determinism in tests.
 
 This flow matters more than the individual implementation language. The
 repository should continue to optimize around this path.
@@ -115,6 +139,19 @@ Rust and C++ are primary because they solve the central problem cleanly:
 - the C ABI keeps the seam explicit instead of magical
 
 Any future additions should strengthen this pairing rather than dilute it.
+
+## Integration Points
+
+The repository is designed to plug into the rest of Xenor without becoming
+entangled with unrelated application logic:
+
+- `xenor-web` can pin a reviewed native revision as a submodule and run native
+  smoke checks in CI
+- other Xenor repositories can call the Rust library for replay execution,
+  snapshot capture, and checksum verification
+- tooling layers can consume emitted replay JSON or benchmark CSV for analysis
+- future bindings should stay behind the C ABI or the safe Rust API rather than
+  reaching into C++ internals directly
 
 ## Extension Guidance
 
