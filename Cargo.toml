@@ -1,0 +1,22 @@
+[package]
+name = "xenor-native"
+version = "0.1.0"
+edition = "2024"
+publish = false
+build = "build.rs"
+default-run = "xenor-cli"
+description = "Deterministic native Xenor simulation kernel with Rust orchestration"
+
+[workspace]
+members = ["."]
+resolver = "3"
+
+[lib]
+path = "crates/xenor-native/src/lib.rs"
+
+[[bin]]
+name = "xenor-cli"
+path = "crates/xenor-cli/src/main.rs"
+
+[build-dependencies]
+cc = "1.2"

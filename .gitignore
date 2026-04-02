@@ -1,0 +1,13 @@
+/target
+/cpp/build
+/cpp/CMakeFiles
+/cpp/CMakeCache.txt
+/zig/.zig-cache
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.dylib
+*.replay.json
+*.bench.csv
