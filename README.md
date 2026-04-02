@@ -175,6 +175,27 @@ GitHub Actions validates the repository with an explicit native-oriented path:
 - CLI smoke execution that emits replay and benchmark artifacts
 - Python tooling smoke checks over those generated artifacts
 
+## Downstream Sync Automation
+
+After the validation workflow succeeds for a push to `main`, `xenor-native`
+dispatches a downstream sync request to `xenor-web`. The downstream repository
+then attempts to update its `xenor-native` submodule pointer, reruns the
+existing lightweight validation, and opens or refreshes an automation pull
+request instead of pushing directly to `main`.
+
+This dispatch requires the `XENOR_SYNC_TOKEN` repository secret in
+`xenor-native`.
+
+- target repository: `XENOr-god/xenor-site`
+- trigger mechanism: `repository_dispatch`
+- required secret name: `XENOR_SYNC_TOKEN`
+- classic PAT minimum scope: `repo`
+- fine-grained PAT minimum access: repository access to `XENOr-god/xenor-site`
+  with `Contents: write`
+
+If the organization requires approval for fine-grained tokens, approve the
+token for the target repository before relying on automatic sync.
+
 ## Optional Sidecar Modules
 
 The optional modules are present because they support Xenor-native concerns, not
