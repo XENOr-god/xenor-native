@@ -17,7 +17,7 @@ repository extends that identity with a native-first stack:
   analysis, allocators, invariant checks, and micro-kernel experiments.
 
 The point is not language variety. The point is disciplined boundaries around
-deterministic simulation work
+deterministic simulation work.
 
 `xenor-native` is intended to be consumed by other Xenor repositories rather
 than folded into them:
