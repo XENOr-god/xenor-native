@@ -2,9 +2,10 @@
 
 ## Repository Purpose
 
-`xenor-native` is a native execution laboratory for Xenor's deterministic
+`xenor-native` is the experimental native lab for XENOr's deterministic
 simulation model. The repository exists to keep low-level runtime work close to
-the metal while preserving the same identity that defines Xenor elsewhere:
+the metal while it is still being proven, without turning unfinished native
+work into the canonical substrate:
 
 - deterministic simulation
 - explicit tick and phase execution
@@ -12,13 +13,14 @@ the metal while preserving the same identity that defines Xenor elsewhere:
 - seed and input handling
 - snapshot and checksum verification
 
-This repository complements Xenor's existing codebases. It does not redefine
-the broader project.
+This repository complements XENOr's existing codebases. It does not redefine
+the broader project, and it is not the canonical deterministic substrate.
 
-It is also the native boundary that other Xenor repositories can depend on
-without inheriting the full implementation directly. `xenor-web` consumes it as
-a pinned Git submodule so CI and documentation can reference a specific native
-revision.
+It is also a narrow native boundary that other XENOr repositories can depend on
+without inheriting the full implementation directly. `xenor-site` consumes it
+as a pinned Git submodule so CI and documentation can reference a specific
+experimental native revision. Mature substrate work should graduate into
+`xenor-engine`.
 
 ## Primary Boundaries
 
