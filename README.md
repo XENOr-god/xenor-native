@@ -1,53 +1,87 @@
 # xenor-native
 
-`xenor-native` is a native simulation backend and laboratory for the Xenor
-ecosystem. It does not replace the existing Xenor repositories. It provides a
-focused environment for deterministic stepping, replay validation, seed/input
-handling, snapshot extraction, and checksum verification close to the machine.
+`xenor-native` is the experimental native lab for the XENOr stack. It is a
+bounded incubation repository for low-level native execution work. It is not a
+co-equal public core layer, and it is not the canonical deterministic
+substrate.
 
-## Role In The Xenor Ecosystem
+## Status
 
-Xenor already centers deterministic execution and inspectable simulation. This
-repository extends that identity with a native-first stack:
+Active experimental repository. Useful for native research, verification, and
+benchmarking work, but not the canonical substrate that the public stack should
+treat as stable.
 
-- Rust hosts orchestration, replay control, tests, and the CLI/runtime surface.
-- C++ owns the deterministic simulation kernel and core state transitions.
-- A thin C ABI keeps the boundary stable and auditable.
-- Python, Zig, Haskell, and assembly remain isolated sidecar modules for
-  analysis, allocators, invariant checks, and micro-kernel experiments.
+## Role in XENOr
 
-The point is not language variety. The point is disciplined boundaries around
-deterministic simulation work.
+`xenor-native` exists to keep low-level native work contained while it is still
+being proven.
 
-`xenor-native` is intended to be consumed by other Xenor repositories rather
-than folded into them:
+This repository is where XENOr can explore:
 
-- `xenor-web` vendors this repository as a Git submodule so the public surface
-  can pin an explicit native revision and validate that the native workspace is
-  present and healthy in CI.
-- future Xenor execution or simulation repositories can bind to the Rust API,
-  invoke the CLI for replay checks, or treat the C ABI as a stable native seam.
+- native execution kernels
+- replay and checksum experiments
+- ABI boundaries
+- verification harnesses
+- benchmarking paths
+- parity and low-level instrumentation work
 
-## Language Responsibilities
+The point is not language variety. The point is to keep unfinished native work
+out of the canonical substrate until it is ready.
 
-- Rust: safe host layer, orchestration, replay/runtime control, CLI entrypoint,
-  and deterministic test harness
-- C++: deterministic simulation kernel, phase execution, snapshot extraction,
-  and checksum generation behind a C ABI
-- Python: replay inspection and benchmark reporting only
-- Zig, Haskell, Assembly: isolated secondary modules for allocator experiments,
-  invariant validation, and checksum micro-kernel research
+## Relationship to xenor-engine
 
-## Core Capabilities
+`xenor-engine` is the canonical deterministic substrate for the public XENOr
+stack.
 
-- seed-driven runtime initialization
-- explicit tick and phase execution
-- replay playback from recorded input frames
-- state snapshot extraction at deterministic boundaries
-- checksum generation for replay validation
-- deterministic regression tests for same-input/same-output guarantees
+`xenor-native` sits upstream of that surface as an experimental native lab.
+Work can graduate from `xenor-native` into `xenor-engine`, but `xenor-native`
+itself must not be presented as the primary engine or canonical substrate.
 
-## Repository Layout
+The relationship is deliberately asymmetric:
+
+- incubation can happen in `xenor-native`
+- canonical substrate ownership stays in `xenor-engine`
+
+## What belongs here
+
+- experimental kernels and runtime paths
+- replay, checksum, and snapshot verification experiments
+- thin ABI seams and boundary validation
+- parity probes and low-level determinism checks
+- benchmark harnesses and measurement tooling
+- isolated allocator, invariant, and micro-kernel research
+
+## What does NOT belong here
+
+- canonical substrate claims
+- public stack ownership language
+- token or deployment messaging
+- primary newcomer documentation
+- production-ready positioning for unfinished native work
+- work that already belongs in `xenor-engine`
+
+## Graduation criteria
+
+Work should move from `xenor-native` into `xenor-engine` only when it meets all
+of the following:
+
+- deterministic behavior is repeatable and clearly specified
+- the boundary is narrow enough to review and maintain
+- replay, snapshot, checksum, or ABI semantics are explicit
+- tests and benchmarks justify promotion
+- the responsibility belongs in the canonical substrate rather than an open
+  experiment loop
+
+## Language responsibilities
+
+- Rust: host layer, orchestration, replay/runtime control, CLI, and test
+  harnesses
+- C++: kernel experiments and low-level state transition paths behind the ABI
+- Python: replay inspection and benchmark reporting
+- Zig, Haskell, Assembly: optional sidecar research modules for allocator,
+  invariant, and checksum experimentation
+
+## Repository layout
 
 ```text
 xenor-native/
@@ -57,48 +91,18 @@ xenor-native/
   build.rs
   crates/
     xenor-native/
-      src/
-        lib.rs
-        ffi.rs
-        runtime.rs
-        replay.rs
-        snapshot.rs
-        checksum.rs
     xenor-cli/
-      src/
-        main.rs
   cpp/
-    include/
-      xenor_sim.h
-      xenor_types.h
-    src/
-      xenor_internal.hpp
-      xenor_sim.cpp
-      xenor_state.cpp
-      xenor_math.cpp
-      xenor_checksum.cpp
-    CMakeLists.txt
   python/
-    tools/
-      analyze_replay.py
-      benchmark_report.py
   zig/
-    alloc/
-      arena_alloc.zig
   mlang/
-    haskell/
-      InvariantCheck.hs
   asm/
-    kernels/
-      tick_hash.S
   tests/
-    determinism.rs
-    replay.rs
 ```
 
-## Build, Run, Test
+## Build, run, test
 
-Rust is the primary entrypoint and builds the C++ kernel through Cargo.
+Rust is the primary entrypoint and builds the C++ layer through Cargo.
 
 ```bash
 cargo build
@@ -123,10 +127,10 @@ cmake -S cpp -B cpp/build
 cmake --build cpp/build
 ```
 
-## CLI Workflow
+## CLI workflow
 
-The CLI runs a deterministic replay from either an embedded sample or a tiny
-comma-separated input file:
+The CLI runs deterministic native experiments from either an embedded sample or
+a tiny comma-separated input file:
 
 ```text
 throttle,steer,action_mask
@@ -143,81 +147,48 @@ cargo run --bin xenor-cli -- --seed 17 --input-file replay.txt --emit-replay tar
 cargo run --bin xenor-cli -- --seed 17 --repeat 100 --benchmark-out target/bench.csv
 ```
 
-## Replay, Snapshot, And Checksum Flow
+## CI expectations
 
-The kernel uses integer-only state transitions and explicit phase ordering:
-
-`seed -> input frame -> input phase -> simulation phase -> finalize phase -> snapshot -> checksum`
-
-Replay validation depends on two invariants:
-
-- the same seed and the same input sequence must yield the same final snapshot
-  and checksum
-- changing the input sequence must change the terminal state or checksum
-
-The test suite enforces both cases.
-
-## Tooling
-
-- `xenor-cli --emit-replay` writes a JSON replay report containing frames,
-  snapshots, and checksums
-- `python/tools/analyze_replay.py` inspects a replay file and highlights
-  monotonic tick flow and checksum evolution
-- `python/tools/benchmark_report.py` summarizes benchmark CSV output and checks
-  checksum stability across repeated runs
-
-## CI Expectations
-
-GitHub Actions validates the repository with an explicit native-oriented path:
+GitHub Actions validates the repository as an experimental native lab:
 
 - `cargo test`
-- direct CMake build of the C++ kernel
+- direct CMake build of the C++ layer
 - CLI smoke execution that emits replay and benchmark artifacts
-- Python tooling smoke checks over those generated artifacts
+- Python tooling smoke checks over generated artifacts
 
-## Downstream Sync Automation
+These checks prove the lab is healthy. They do not turn the lab into the
+canonical substrate.
+
+## Consumption by other XENOr repositories
+
+Expected integration points are narrow:
+
+- `xenor-site` can pin a reviewed experimental revision as a Git submodule
+- other repos can call the Rust library or CLI for bounded replay or checksum
+  checks
+- generated replay artifacts can be inspected offline through the Python tools
+
+Use this repository to harden low-level ideas before promotion, not to blur repo
+boundaries across the active stack.
+
+## Optional sidecar modules
+
+The optional modules remain isolated because they support native-lab research,
+not because they are part of the public core stack:
+
+- Zig: allocator experiments
+- Haskell: invariant validation
+- Assembly: checksum micro-kernel experiments
+
+They stay outside the default build so the Rust/C++ path remains primary and
+coherent.
+
+## Downstream sync automation
 
 After the validation workflow succeeds for a push to `main`, `xenor-native`
-dispatches a downstream sync request to `xenor-web`. The downstream repository
-then attempts to update its `xenor-native` submodule pointer, reruns the
-existing lightweight validation, and opens or refreshes an automation pull
+dispatches a downstream sync request to `xenor-site`. The downstream repository
+can then review and update its `xenor-native` submodule pointer through a pull
 request instead of pushing directly to `main`.
 
-This dispatch requires the `XENOR_SYNC_TOKEN` repository secret in
-`xenor-native`.
-
-- target repository: `XENOr-god/xenor-site`
-- trigger mechanism: `repository_dispatch`
-- required secret name: `XENOR_SYNC_TOKEN`
-- classic PAT minimum scope: `repo`
-- fine-grained PAT minimum access: repository access to `XENOr-god/xenor-site`
-  with `Contents: write`
-
-If the organization requires approval for fine-grained tokens, approve the
-token for the target repository before relying on automatic sync.
-
-## Optional Sidecar Modules
-
-The optional modules are present because they support Xenor-native concerns, not
-because they are fashionable:
-
-- Zig: fixed arena allocator sketch for deterministic scratch storage
-- Haskell: offline invariant checker for snapshot streams
-- Assembly: isolated hash-mix experiment for checksum micro-kernels
-
-They are intentionally outside the default build so the Rust/C++ core stays
-primary and coherent.
-
-## Consumption By Other Xenor Repositories
-
-Expected integration points are deliberately narrow:
-
-- pin the repository as a submodule when another Xenor repository needs a
-  reviewed native revision
-- call the Rust library for replay execution and snapshot/checksum retrieval
-- invoke `xenor-cli` in CI for deterministic smoke checks
-- consume generated replay artifacts from Python tooling for offline inspection
-
-This repository is the native validation surface. Other repositories should use
-it to strengthen determinism and integration discipline, not to duplicate the
-kernel internally.
+This keeps the experimental lab visible to the public surface without implying
+that the lab is the canonical substrate.
